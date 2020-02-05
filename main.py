@@ -5,19 +5,39 @@ import csv
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import percentileofscore
 
 
 def main():
-    soup = download_results()
-    results = build_results_array(soup)
-    export_results_to_csv(results)
-    frame = export_results_to_pandas(results)
-    foo = resample_results(frame, 1000, 1099)
-    foo = foo.loc[:, (foo > 100.0).any(axis=0)]
-    foo = foo.filter(regex=(r'SDE'))
+    #soup = download_results()
+    #results = build_results_array(soup)
+    #export_results_to_csv(results)
+    #frame = export_results_to_pandas(results)
+    frame = pd.read_csv('Iowa 2020 Democratic Party Caucus Results Afternoon 2-5-2020 (corrected).csv', index_col=[0,1], header=0)
+    foo = resample_results(frame, 100000, 1099)
+    #Show_SDE_Distribution(foo,
+    #                      {'Buttigieg': 363, 'Sanders': 338, 'Warren': 246, 'Biden': 210, 'Klobuchar': 170, 'Yang': 14})
+    Show_Final_Distribution(foo,
+                          {'Buttigieg': 27030, 'Sanders': 28220, 'Warren': 22254, 'Biden': 14176})
+
+
+def Show_SDE_Distribution(result_frame, pub):
+    foo = result_frame.loc[:, (result_frame > 10.0).any(axis=0)].filter(regex=(r'SDE'))
     ax = foo.plot.kde()
+
+    for key, val in pub.items():
+        print('{} score in {} percentile'.format(key, percentileofscore(result_frame['{}_SDE'.format(key)], val)))
+        ax.axvline(val, 0, 0.5)
     plt.show()
 
+def Show_Final_Distribution(result_frame, pub):
+    foo = result_frame.loc[:, (result_frame > 100.0).any(axis=0)].filter(regex=(r'Final_Expression'))
+    ax = foo.plot.kde()
+
+    for key, val in pub.items():
+        print('{} score in {} percentile'.format(key, percentileofscore(result_frame['{}_Final_Expression'.format(key)], val)))
+        ax.axvline(val, 0, 30000)
+    plt.show()
 
 def build_results_array(soup):
     return [extract_headers(soup)] + extract_results(soup)
@@ -29,7 +49,7 @@ def download_results():
 
 
 def export_results_to_csv(arr):
-    with open('Iowa 2020 Democratic Caucus Results.csv', 'w+', newline='') as csvout:
+    with open('Iowa 2020 Democratic Party Caucus Results.csv', 'w+', newline='') as csvout:
         csvr = csv.writer(csvout)
         csvr.writerows(arr)  # Build the rows
 
