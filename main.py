@@ -9,35 +9,57 @@ from scipy.stats import percentileofscore
 
 
 def main():
-    #soup = download_results()
-    #results = build_results_array(soup)
-    #export_results_to_csv(results)
-    #frame = export_results_to_pandas(results)
-    frame = pd.read_csv('Iowa 2020 Democratic Party Caucus Results Afternoon 2-5-2020 (corrected).csv', index_col=[0,1], header=0)
-    foo = resample_results(frame, 100000, 1099)
-    #Show_SDE_Distribution(foo,
-    #                      {'Buttigieg': 363, 'Sanders': 338, 'Warren': 246, 'Biden': 210, 'Klobuchar': 170, 'Yang': 14})
-    Show_Final_Distribution(foo,
-                          {'Buttigieg': 27030, 'Sanders': 28220, 'Warren': 22254, 'Biden': 14176})
+    # soup = download_results()
+    # results = build_results_array(soup)
+    # export_results_to_csv(results)
+    # frame = export_results_to_pandas(results)
+    frame = pd.read_csv('Iowa 2020 Democratic Party Caucus Results.csv', index_col=[0, 1], header=0)
+    reported = {'2-4-2020 PM': {'n': 1099,
+                                'pub': {'Buttigieg': 363, 'Sanders': 338, 'Warren': 246, 'Biden': 210, 'Klobuchar': 170,
+                                        'Yang': 14}},
+                '2-5-2020 AM': {'n': 1250,
+                                'pub': {'Buttigieg': 418, 'Sanders': 393, 'Warren': 286, 'Biden': 241, 'Klobuchar': 196,
+                                        'Yang': 16}},
+                '2-5-2020 Midday': {'n': 1320,
+                                    'pub': {'Buttigieg': 442, 'Sanders': 413, 'Warren': 299, 'Biden': 257,
+                                            'Klobuchar': 205, 'Yang': 17}},
+                '2-5-2020 Afternoon': {'n': 1520,
+                                       'pub': {'Buttigieg': 511, 'Sanders': 488, 'Warren': 351,
+                                               'Biden': 305, 'Klobuchar': 232,
+                                               'Yang': 19}}
+                }
+
+    Show_SDE_Distribution(frame, reported['2-5-2020 Afternoon']['n'], reported['2-5-2020 Afternoon']['pub'])
+    # Show_Final_Distribution(foo,
+    #                      {'Buttigieg': 27030, 'Sanders': 28220, 'Warren': 22254, 'Biden': 14176})
 
 
-def Show_SDE_Distribution(result_frame, pub):
-    foo = result_frame.loc[:, (result_frame > 10.0).any(axis=0)].filter(regex=(r'SDE'))
+def Show_SDE_Distribution(result_frame, n, pub):
+    foo = resample_results(result_frame, 100000, n)
+    foo = foo.loc[:, (foo > 10.0).any(axis=0)].filter(regex=(r'SDE'))
     ax = foo.plot.kde()
+    ax.set_title('{}% Reporting Sampling Distribution of SDE by Candidate'.format(round(100 * n / 1765.0)))
+    ax.set_xlabel('SDE @ {}% Reporting'.format(round(100 * n / 1765.0)))
+    ax.set_ylabel('Probability')
 
     for key, val in pub.items():
-        print('{} score in {} percentile'.format(key, percentileofscore(result_frame['{}_SDE'.format(key)], val)))
+        ax.text(val, 0.175,
+                '{} percentile'.format(percentileofscore(foo['{}_SDE'.format(key)], val)), fontsize=8,
+                horizontalalignment='left', rotation=45)
         ax.axvline(val, 0, 0.5)
     plt.show()
 
+
 def Show_Final_Distribution(result_frame, pub):
-    foo = result_frame.loc[:, (result_frame > 100.0).any(axis=0)].filter(regex=(r'Final_Expression'))
+    foo = resample_results(result_frame, 1000, 1099)
+    foo = foo.loc[:, (foo > 100.0).any(axis=0)].filter(regex=(r'Final_Expression'))
     ax = foo.plot.kde()
 
     for key, val in pub.items():
-        print('{} score in {} percentile'.format(key, percentileofscore(result_frame['{}_Final_Expression'.format(key)], val)))
+        print('{} score in {} percentile'.format(key, percentileofscore(foo['{}_Final_Expression'.format(key)], val)))
         ax.axvline(val, 0, 30000)
     plt.show()
+
 
 def build_results_array(soup):
     return [extract_headers(soup)] + extract_results(soup)
